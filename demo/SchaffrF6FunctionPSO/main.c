@@ -77,7 +77,7 @@ int main(void)
 	printf("Initial best fitness: %.10f at (%.4f, %.4f)\n", swarm[gbest].pbestfit, swarm[gbest].pbestx[0], swarm[gbest].pbestx[1]);
 
 	/* Particles Update */
-	fp = fopen("Fitness.dat", "w");
+	fp = fopen("Fitness.data", "w");
 	for (iter = 0; iter < MAX_ITERATION; iter++)
 	{
 		for(i = 0; i < SWARM_SIZE; i++)
