@@ -119,7 +119,7 @@ int main(void)
 		char snapshot_filename[100];
 		if (iter == 0 || (iter+1) % INTERVAL == 0)
 		{
-			sprintf(snapshot_filename, "snapshoot%03d.dat", iter+1);
+			sprintf(snapshot_filename, "snapshoot%03d.data", iter+1);
 			FILE *fp_snap = fopen(snapshot_filename, "w");
 			for (int i = 0; i < SWARM_SIZE; i++)
 			{
