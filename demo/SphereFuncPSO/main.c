@@ -1,59 +1,34 @@
-#include <stdio.h>
-#include <math.h>
-#include <time.h>
-#include <stdlib.h>
-
-/* PSO Parameters Setting */
-#ifndef PSO
-#define DIMENSION 2	// Dimensions of Problem
-#define SWARM_SIZE 20	// Typical: 15-30
-#define MAX_ITERATION 300	// Maximum iteration
-#define INTERVAL 50	// Iteration Interval (for visiualization)
-#define W 0.5	// Weight of Velocity
-#define C1 1.5	// Weight of Pbest
-#define C2 1.5	// Weight of Gbest
-#define MIN_X -10.0
-#define MAX_X 10.0
-#define MIN_V -0.5
-#define MAX_V 0.5
-
-typedef struct {
-	double x[DIMENSION];	// Position of Particle
-	double v[DIMENSION];	// Velocity of Particle
-	double fitness;		// Fitness of Particle
-	double pbestfit;		// Best Fitness of Particle
-	double pbestx[DIMENSION]; // Position correspond to cornfield vector
-} Particle;
-
-double FitnessFunc(double x1, double x2);
-
-/* Fitness Function: Sphere function (Minimalized Version) */
-double FitnessFunc(double x1, double x2)
-{
-	double Max_Fitness = 2.0 * MAX_X * MAX_X;
-	return ((x1*x1 + x2*x2) / Max_Fitness);
-}
-#endif
+#include "main.h"
 
 int main(void)
 {
 	FILE *fp = NULL;
-	srand(time(NULL));
 
-	/* Search Space Parameters */
-	const double STEP = 0.1;
+	FILE *rand_seed_fp = fopen("RandNumSeed.txt", "r");
+	unsigned int rand_seed;
+	if(!rand_seed_fp)
+	{
+		rand_seed_fp = fopen("RandNumSeed.txt", "w");
+		rand_seed = (unsigned int)time(NULL);
+		fprintf(rand_seed_fp,"%u\n", rand_seed);
+	}
+	else
+	{
+		fscanf(rand_seed_fp, "%u", &rand_seed);
+	}
+	srand(rand_seed);
 
 	/* PSO Paradigm Testing */
 	printf("====== PSO Algorithm Test: Sphere Function ======\n");
 	printf("Test starting...\n");
-	
-	/* Search Space Parameters */
 
 	/* Initialization of Swarm */
 	printf("Swarm initialization starting...\n");
-	Particle swarm[SWARM_SIZE];
-	int gbest = 0;
+
+	Particle swarm[SWARM_SIZE];	// Swarm (Particles)
+	int gbest = 0;	//  Index of global best
 	int i, j, iter;
+	
 	for (i = 0; i < SWARM_SIZE; i++)
 	{
 		for (j = 0; j < DIMENSION; j++)
@@ -62,23 +37,24 @@ int main(void)
 			swarm[i].v[j] = MIN_V + (double)rand() / RAND_MAX * (MAX_V - MIN_V);	// Particle Velocity Initialization
 			swarm[i].pbestx[j] = swarm[i].x[j];				// Particle Best Position Initialization
 		}
-		swarm[i].fitness = FitnessFunc(swarm[i].x[0], swarm[i].x[1]);	// Particle Fitness Initialization	
+		swarm[i].fitness = FitnessFunc(swarm[i].x, DIMENSION);	// Particle Fitness Initialization	
 		swarm[i].pbestfit = swarm[i].fitness;	// Particcle Best Fitness Initialization
 		
 		// Global Best Particle Index Initialization
 		if (swarm[i].pbestfit < swarm[gbest].pbestfit)
 			gbest = i;
 	}
+
 	printf("Swarm initialization completed.\n");
-	printf("Initial best fitness: %.10f at (%.4f, %.4f)\n", swarm[gbest].pbestfit, swarm[gbest].pbestx[0], swarm[gbest].pbestx[1]);
+	
+	printf("Initial best fitness: %.10f at (%.4f, %.4f)\n", swarm[gbest].pbestfit, swarm[gbest].pbestx[0], swarm[gbest].pbestx[1]);	// Initialization Prompt
 
 	/* Particles Update */
-	fp = fopen("Fitness.data", "w");
 	for (iter = 0; iter < MAX_ITERATION; iter++)
 	{
 		for(i = 0; i < SWARM_SIZE; i++)
 		{
-			swarm[i].fitness = FitnessFunc(swarm[i].x[0], swarm[i].x[1]);// Particle Fitness Calculation
+			swarm[i].fitness = FitnessFunc(swarm[i].x, DIMENSION);// Particle Fitness Calculation
 			if (swarm[i].fitness < swarm[i].pbestfit)
 			{
 				swarm[i].pbestfit = swarm[i].fitness;	// Particle Best Fitness Update
@@ -109,27 +85,20 @@ int main(void)
 					swarm[i].x[j] = MIN_X;
 			}
 		}
-		/* Iteration Output */
+
+		/* (Interval) Iteration Output */
 		if ((iter + 1) % 10 == 0)
 		{
 			printf("Iteration %3d: Bestfitness = %.10e at (%.4f, %.4f)\n", iter + 1, swarm[gbest].pbestfit, swarm[gbest].pbestx[0], swarm[gbest].pbestx[1]);
 		}
-		fprintf(fp, "%d %.10e\n", iter, swarm[gbest].pbestfit);	// Global best fitness of each iteration (convergence speed)
-		// Particles' position of iteration interval
-		char snapshot_filename[100];
-		if (iter == 0 || (iter+1) % INTERVAL == 0)
-		{
-			sprintf(snapshot_filename, "snapshoot%03d.data", iter+1);
-			FILE *fp_snap = fopen(snapshot_filename, "w");
-			for (int i = 0; i < SWARM_SIZE; i++)
-			{
-				fprintf(fp_snap, "%.6f %.6f\n", swarm[i].x[0], swarm[i].x[1]);
-			}
-			fclose(fp_snap);
-		}
+
+		/* Iteration Output */
+		fp = fopen("Fitness.data", "a");
+		fprintf(fp, "%d %.10e\n", iter, swarm[gbest].pbestfit);	// Global best fitness of each iteration (convergence speed): Fitness.data
+		fclose(fp);
 	}
-	fclose(fp);
 
 	/* Optimization Output */
+
 	return 0;
 }
