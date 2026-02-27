@@ -17,4 +17,4 @@ set format y "10^{%L}"
 
 set style line 1 linewidth 2.5 linecolor rgb "#E69F00" pointtype 7 pointsize 0.8
 
-plot "Fitness.data" using 1:2 with lines title "G_{Best} Fitness"
+plot "Fitness.data" using 1:2 with lines title "Swarm Size: 20", "" using 1:3 with lines title "Swarm Size: 50", "" using 1:4 with lines title "Swarm Size: 70", "" using 1:5 with lines title "Swarm Size: 100", "" using 1:6 with lines title "Swarm Size: 120"

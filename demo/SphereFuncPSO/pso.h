@@ -1,6 +1,6 @@
 #ifndef PSO
 #define DIMENSION 2	// Dimensions of Problem
-#define SWARM_SIZE 20	// Typical: 15-30
+//#define SWARM_SIZE 20	// Typical: 15-30
 #define MAX_ITERATION 300	// Maximum iteration
 #define INTERVAL 50	// Iteration Interval (for visiualization)
 
