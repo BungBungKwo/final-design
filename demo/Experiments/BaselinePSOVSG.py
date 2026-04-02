@@ -74,8 +74,15 @@ DataTrain, DataTest = train_test_split(Dataset_MLCC, train_size=TRAIN_SIZE, rand
 print(DataTrain)
 print(DataTest)
 
-
-
+# Fitness Function
+# Pre-train Model
+# PSO Domain Calculation
+# while size(NewSamples) < Nvir:
+    # Global Best (Position=None,Fitness=inf)
+    # Particles Initialization (Position, Velocity)
+    # PSO Argument Settings
+    # PSO Search
+    # New Samples Append
 
 ## Pre-processing: Normalization
 #scaler = StandardScaler()
