@@ -115,7 +115,7 @@ with open(StatisticResultsOutput,  mode="w", newline="") as f:
 # RMSE Plot
 matplotlib.pyplot.plot(TRAIN_SIZE, OrigTestRMSEs_Mean, label="Test Data")
 matplotlib.pyplot.plot(TRAIN_SIZE, OrigTrainRMSEs_Mean, label="Train Data")
-matplotlib.pyplot.legend()
+matplotlib.pyplot.legend(loc=1)
 matplotlib.pyplot.title("MLCC Dataset Fitting: RMSE (ELM)")
 matplotlib.pyplot.xlabel("Size of Training Set")
 matplotlib.pyplot.ylabel("RMSE Value")
@@ -124,7 +124,7 @@ matplotlib.pyplot.show()
 # MAPE Plot
 matplotlib.pyplot.plot(TRAIN_SIZE, OrigTestMAPEs_Mean, label="Test Data")
 matplotlib.pyplot.plot(TRAIN_SIZE, OrigTrainMAPEs_Mean, label="Train Data")
-matplotlib.pyplot.legend()
+matplotlib.pyplot.legend(loc=1)
 matplotlib.pyplot.title("MLCC Dataset Fitting: MAPE (ELM)")
 matplotlib.pyplot.xlabel("Size of Training Set")
 matplotlib.pyplot.ylabel("MAPE Value")

@@ -61,47 +61,65 @@ with open(ExperimentConfigOutput,  mode="w", newline="") as f:
 
 # Dataset (MLCC)
 Dataset_MLCC = pandas.read_csv("Dataset/RealDataset.csv", decimal='.', index_col=0)
-#print(Dataset_MLCC)
-Features = ['PSD-10','Mois','DF*10-4','TC-min','TC-max','TC peak','4SA','PSD-90','PSD-50','Sinter temp','K','D-50']
-PredPara = 'RK'
+print(Dataset_MLCC)
+
+Features = Dataset_MLCC.columns[Dataset_MLCC.columns != 'RK']
+PredPara = Dataset_MLCC.columns[Dataset_MLCC.columns == 'RK']
+print("====== Index Verification =======")
+print(Features)
+print(PredPara)
 
 # Dataset Processing
 DataTrain, DataTest = train_test_split(Dataset_MLCC, train_size=TRAIN_SIZE, random_state=RANDSEED)
-
-RF_Raw = RandomForestRegressor()
-RF_Raw.fit(DataTrain[Features].values,DataTrain[PredPara].values)
-OrigYTrainPred = RF_Raw.predict(DataTrain[Features].values)
-OrigYTestPred = RF_Raw.predict(DataTest[Features].values)
-# Evaluation
-OrigTrainRMSE = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred))
-OrigTrainMAPE = mean_absolute_percentage_error(DataTrain[PredPara].values, OrigYTrainPred)
-OrigTestRMSE = numpy.sqrt(mean_squared_error(DataTest[PredPara].values, OrigYTestPred))
-OrigTestMAPE = mean_absolute_percentage_error(DataTest[PredPara].values, OrigYTestPred)
-
-# Pre-processing: Normalization
-scaler = StandardScaler()
-XTrain = scaler.fit_transform(DataTrain[Features].values)
-XTest = scaler.transform(DataTest[Features].values)
-#print(f'Train Shape: {XTrain.shape}')
-#print(f'Test Shape: {XTest.shape}')
-#print(XTrain)
-#print(XTest)
-
-# PSO Domain
-PSOBound_LB = XTrain.min(axis=0)
-PSOBound_UB = XTrain.max(axis=0)
-#print("====== PSO Boundaries ======")
-print(f"PSO Bound(LB): {PSOBound_LB}")
-print(f"PSO Bound(UB): {PSOBound_UB}")
-
-# Fitness Function
-#def PSOFitnessFunc(x):
+print(DataTrain)
+print(DataTest)
 
 
 
-#CL = Numpy.mean(data_train.loc(axis=1)['X', 'Y'])
-#N_L = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] <= CL, axis=0)
-#N_U = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] >= CL, axis=0)
-#s_p = 1
-#sk_L = N_L / (N_L + N_U + s_p)
-#sk_U = N_U / (N_L + N_U + s_p)
+
+## Pre-processing: Normalization
+#scaler = StandardScaler()
+#XTrain = scaler.fit_transform(DataTrain[Features].values)
+#XTest = scaler.transform(DataTest[Features].values)
+##print(f'Train Shape: {XTrain.shape}')
+##print(f'Test Shape: {XTest.shape}')
+##print(XTrain)
+##print(XTest)
+#
+## Regressoion Model
+#RegModel = ELMRegressor(RandomState=RANDSEED)
+#
+## Model Fitting
+#RegModel.fit(XTrain,DataTrain[PredPara].values)
+#
+## Prediction
+#OrigYTrainPred = RegModel.predict(XTrain)
+#OrigYTestPred = RegModel.predict(XTest)
+#
+## Evaluation
+#OrigTrainRMSE = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred))
+#OrigTrainMAPE = mean_absolute_percentage_error(DataTrain[PredPara].values, OrigYTrainPred)
+#OrigTestRMSE = numpy.sqrt(mean_squared_error(DataTest[PredPara].values, OrigYTestPred))
+#OrigTestMAPE = mean_absolute_percentage_error(DataTest[PredPara].values, OrigYTestPred)
+#
+#print(f"OrigTrainRMSE: {OrigTrainRMSE} | OrigTrainMAPE: {OrigTrainMAPE}")
+#
+## PSO Domain
+#PSOBound_LB = XTrain.min(axis=0)
+#PSOBound_UB = XTrain.max(axis=0)
+##print("====== PSO Boundaries ======")
+##print(f"PSO Bound(LB): {PSOBound_LB}")
+##print(f"PSO Bound(UB): {PSOBound_UB}")
+#
+## Fitness Function
+##def PSOFitnessFunc(x):
+#
+#
+#
+##CL = Numpy.mean(data_train.loc(axis=1)['X', 'Y'])
+##N_L = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] <= CL, axis=0)
+##N_U = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] >= CL, axis=0)
+##s_p = 1
+##sk_L = N_L / (N_L + N_U + s_p)
+##sk_U = N_U / (N_L + N_U + s_p)
+#
