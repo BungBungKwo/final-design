@@ -120,13 +120,3 @@ print(DataTest)
 #
 ## Fitness Function
 ##def PSOFitnessFunc(x):
-#
-#
-#
-##CL = Numpy.mean(data_train.loc(axis=1)['X', 'Y'])
-##N_L = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] <= CL, axis=0)
-##N_U = np.count_nonzero(data_train.loc(axis=1)['X', 'Y'] >= CL, axis=0)
-##s_p = 1
-##sk_L = N_L / (N_L + N_U + s_p)
-##sk_U = N_U / (N_L + N_U + s_p)
-#
