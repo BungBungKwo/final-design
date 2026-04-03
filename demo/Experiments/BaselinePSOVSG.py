@@ -65,20 +65,48 @@ print(Dataset_MLCC)
 
 Features = Dataset_MLCC.columns[Dataset_MLCC.columns != 'RK']
 PredPara = Dataset_MLCC.columns[Dataset_MLCC.columns == 'RK']
-print("====== Index Verification =======")
-print(Features)
-print(PredPara)
+#print("====== Index Verification =======")
+#print(Features)
+#print(PredPara)
 
 # Dataset Processing
 DataTrain, DataTest = train_test_split(Dataset_MLCC, train_size=TRAIN_SIZE, random_state=RANDSEED)
-print(DataTrain)
-print(DataTest)
+#print(DataTrain)
+#print(DataTest)
+#print(DataTrain.loc(axis=1)[Features])
 
-RegModel = 
+# Pre-processing: Normalization
+scaler = StandardScaler()
+DataTrain_Scaled = scaler.fit_transform(DataTrain)
+DataTest_Scaled = scaler.transform(DataTest)
+#print("Shape of DataTrain_Scaled:", DataTrain_Scaled.shape)
+#print(DataTrain_Scaled)
+DataTrain_Scaled_DF = pandas.DataFrame(DataTrain_Scaled,columns=DataTrain.columns)
+DataTest_Scaled_DF = pandas.DataFrame(DataTest_Scaled,columns=DataTest.columns)
+#print("Shape of DataTrain_Scaled_DF:", DataTrain_Scaled_DF.shape)
+#print(DataTrain_Scaled_DF)
 
 # Fitness Function
 # Pre-train Model
 # PSO Domain Calculation
+LB_MaxMin =  numpy.min(DataTest_Scaled_DF.loc(axis=1)[Features])
+UB_MaxMin =  numpy.max(DataTest_Scaled_DF.loc(axis=1)[Features])
+print(f"UB_MaxMin :\n{UB_MaxMin}")
+print(f"LB_MaxMin :\n{LB_MaxMin}")
+CL = numpy.mean(DataTrain_Scaled_DF.loc(axis=1)[Features])
+N_L = numpy.count_nonzero(DataTrain_Scaled_DF.loc(axis=1)[Features] < CL, axis=0)
+N_U = numpy.count_nonzero(DataTrain_Scaled_DF.loc(axis=1)[Features] > CL, axis=0)
+s_p = 1
+sk_L = N_L / (N_L + N_U + s_p)
+sk_U = N_U / (N_L + N_U + s_p)
+print(f"sk_L :: {sk_L}")
+LB_TIME = CL - 1/sk_U * (CL - numpy.min(DataTrain_Scaled_DF.loc(axis=1)[Features], axis=0))
+UB_TIME = CL + 1/sk_L * (numpy.max(DataTrain_Scaled_DF.loc(axis=1)[Features], axis=0) - CL)
+#print(f"sku :: {sk_U}")
+#LB = np.maximum(LB, 0)
+print(f"UB_TIME :\n{UB_TIME}")
+print(f"LB_TIME :\n{LB_TIME}")
+
 # while size(NewSamples) < Nvir:
     # Global Best (Position=None,Fitness=inf)
     # Particles Initialization (Position, Velocity)
@@ -86,15 +114,6 @@ RegModel =
     # PSO Search
     # New Samples Append
 
-## Pre-processing: Normalization
-#scaler = StandardScaler()
-#XTrain = scaler.fit_transform(DataTrain[Features].values)
-#XTest = scaler.transform(DataTest[Features].values)
-##print(f'Train Shape: {XTrain.shape}')
-##print(f'Test Shape: {XTest.shape}')
-##print(XTrain)
-##print(XTest)
-#
 ## Regressoion Model
 #RegModel = ELMRegressor(RandomState=RANDSEED)
 #
