@@ -91,13 +91,24 @@ for TrainingSetSize in TRAIN_SIZE:
         #print(DataTrain[Features].shape)
         #print(DataTrain[PredPara].shape)
 
+        # Pre-processing: Normalization
+        scaler = StandardScaler()
+        DataTrain_Scaled = scaler.fit_transform(DataTrain)
+        DataTest_Scaled = scaler.transform(DataTest)
+        #print("Shape of DataTrain_Scaled:", DataTrain_Scaled.shape)
+        #print(DataTrain_Scaled)
+        DataTrain_Scaled_DF = pandas.DataFrame(DataTrain_Scaled,columns=DataTrain.columns)
+        DataTest_Scaled_DF = pandas.DataFrame(DataTest_Scaled,columns=DataTest.columns)
+        #print("Shape of DataTrain_Scaled_DF:", DataTrain_Scaled_DF.shape)
+        #print(DataTrain_Scaled_DF)
+
         # Regressoion Model
         RegModel = ELMRegressor(RandomState=RANDSEED+Run)
         # Model Fitting
-        RegModel.fit(DataTrain[Features].values,DataTrain[PredPara].values)
+        RegModel.fit(DataTrain_Scaled_DF[Features].values,DataTrain[PredPara].values)
         # Model Prediction
-        OrigYTrainPred = RegModel.predict(DataTrain[Features].values)
-        OrigYTestPred = RegModel.predict(DataTest[Features].values)
+        OrigYTrainPred = RegModel.predict(DataTrain_Scaled_DF[Features].values)
+        OrigYTestPred = RegModel.predict(DataTest_Scaled_DF[Features].values)
 
         # Evaluation
         OrigTrainRMSE = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred))
@@ -110,7 +121,7 @@ for TrainingSetSize in TRAIN_SIZE:
         OrigTestMAPEs.append(OrigTestMAPE)
 
         # PSO Domain
-        CL = numpy.mean(DataTrain.loc(axis=1)[Features])
+        CL = numpy.mean(DataTest_Scaled_DF.loc(axis=1)[Features])
         print(f'CL-{Run}:',CL)
 
     OrigTrainRMSEs_Mean.append(numpy.mean(OrigTrainRMSEs))
