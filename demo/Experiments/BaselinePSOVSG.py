@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
 import pyswarms
+from pyswarms.utils.plotters import (plot_cost_history, plot_contour)
 import csv
 import matplotlib.pyplot
 import seaborn
@@ -13,9 +14,10 @@ import seaborn
 # Experiment Settings
 RANDSEED = 1025 # Random Seed (For Reproduction)
 # Dataset Settings
-TRAIN_SIZE = [5, 10, 15, 20, 25, 30]   # Multi-size Test
+TRAIN_SIZE = [20, 25]   # Multi-size Test
+#TRAIN_SIZE = [5, 10, 15, 20, 25, 30]   # Multi-size Test
 # Multiple Experiment Settings
-RunNum = 30
+RunNum = 1
 # ELM Settings
 HIDDEN_LAYER_NEURON_NUM = 85
 # PSO Settings
@@ -73,7 +75,11 @@ PredPara = Dataset_MLCC.columns[Dataset_MLCC.columns == 'RK']
 OrigTrainRMSEs_Mean = [] # Train RMSEs (vary in Training Set Size)
 OrigTrainMAPEs_Mean = [] # Train MAPEs (vary in Training Set Size)
 OrigTestRMSEs_Mean = []  # Test RMSEs (vary in Training Set Size)
-OrigTestMAPEs_Mean = []  # Test MAPEs (vary in Training Set Size
+OrigTestMAPEs_Mean = []  # Test MAPEs (vary in Training Set Size)
+OrigTrainRMSEs_Mean_PSOVSG = [] # Train RMSEs (vary in Training Set Size)
+OrigTrainMAPEs_Mean_PSOVSG = [] # Train MAPEs (vary in Training Set Size)
+OrigTestRMSEs_Mean_PSOVSG = []  # Test RMSEs (vary in Training Set Size)
+OrigTestMAPEs_Mean_PSOVSG = []
 
 for TrainingSetSize in TRAIN_SIZE:
     # Evaluation Mean Value Container
@@ -81,7 +87,15 @@ for TrainingSetSize in TRAIN_SIZE:
     OrigTrainMAPEs = []
     OrigTestRMSEs = []
     OrigTestMAPEs = []
+    OrigTrainRMSEs_PSOVSG = []
+    OrigTrainMAPEs_PSOVSG = []
+    OrigTestRMSEs_PSOVSG = []
+    OrigTestMAPEs_PSOVSG = []
+
+    print(f"====== Training Set Size: {TrainingSetSize} ======")
+
     for Run in range(RunNum):
+        Dataset_MLCC = Dataset_MLCC.apply(pandas.to_numeric)
         # Dataset Processing
         DataTrain, DataTest = train_test_split(Dataset_MLCC, train_size=TrainingSetSize, random_state=RANDSEED+Run)
         #print(DataTrain.shape)
@@ -93,23 +107,24 @@ for TrainingSetSize in TRAIN_SIZE:
 
         # Pre-processing: Normalization
         scaler = StandardScaler()
-        DataTrain_Scaled = scaler.fit_transform(DataTrain)
-        DataTest_Scaled = scaler.transform(DataTest)
+        DataTrain_Scaled = scaler.fit_transform(DataTrain[Features].values)
+        DataTest_Scaled = scaler.transform(DataTest[Features].values)
         #print("Shape of DataTrain_Scaled:", DataTrain_Scaled.shape)
         #print(DataTrain_Scaled)
-        DataTrain_Scaled_DF = pandas.DataFrame(DataTrain_Scaled,columns=DataTrain.columns)
-        DataTest_Scaled_DF = pandas.DataFrame(DataTest_Scaled,columns=DataTest.columns)
+        DataTrain_Scaled_DF = pandas.DataFrame(DataTrain_Scaled,columns=DataTrain[Features].columns)
+        DataTest_Scaled_DF = pandas.DataFrame(DataTest_Scaled,columns=DataTest[Features].columns)
         #print("Shape of DataTrain_Scaled_DF:", DataTrain_Scaled_DF.shape)
         #print(DataTrain_Scaled_DF)
+        DataTrain_Scaled_DF_WithRK = DataTrain_Scaled_DF.copy()
+        DataTrain_Scaled_DF_WithRK[PredPara] = DataTrain[PredPara].values
 
         # Regressoion Model
-        RegModel = ELMRegressor(RandomState=RANDSEED+Run)
+        RegModel = ELMRegressor(HiddenLayerNeuronNum=85,RandomState=RANDSEED+Run)
         # Model Fitting
         RegModel.fit(DataTrain_Scaled_DF[Features].values,DataTrain[PredPara].values)
         # Model Prediction
         OrigYTrainPred = RegModel.predict(DataTrain_Scaled_DF[Features].values)
         OrigYTestPred = RegModel.predict(DataTest_Scaled_DF[Features].values)
-
         # Evaluation
         OrigTrainRMSE = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred))
         OrigTrainMAPE = mean_absolute_percentage_error(DataTrain[PredPara].values, OrigYTrainPred)
@@ -119,129 +134,99 @@ for TrainingSetSize in TRAIN_SIZE:
         OrigTrainMAPEs.append(OrigTrainMAPE)
         OrigTestRMSEs.append(OrigTestRMSE)
         OrigTestMAPEs.append(OrigTestMAPE)
-
+        
         # PSO Domain
-        CL = numpy.mean(DataTest_Scaled_DF.loc(axis=1)[Features])
-        print(f'CL-{Run}:',CL)
+        CL = numpy.mean(DataTrain.loc(axis=1)[Features], axis=0)
+        #print("====== CL ======")
+        #print(CL)
+        N_L = numpy.count_nonzero(DataTrain.loc(axis=1)[Features] < CL, axis=0)
+        N_U = numpy.count_nonzero(DataTrain.loc(axis=1)[Features] > CL, axis=0)
+        s_p = 1
+        sk_L = N_L / (N_L + N_U + s_p)
+        sk_U = N_U / (N_L + N_U + s_p)
+        LB_TIME = CL - 1/sk_U * (CL - numpy.min(DataTrain.loc(axis=1)[Features], axis=0))
+        UB_TIME = CL + 1/sk_L * (numpy.max(DataTrain.loc(axis=1)[Features], axis=0) - CL)
+        #print(f"UB_TIME :\n{UB_TIME}")
+        #print(f"LB_TIME :\n{LB_TIME}")
+        # Scale Boundaries
+        mean_X = scaler.mean_
+        scale_X = scaler.scale_
+        LB_TIME_scaled = (LB_TIME - mean_X) / scale_X
+        UB_TIME_scaled = (UB_TIME - mean_X) / scale_X
+        # Distribution Check
+        #print("Train mean (≈0):", numpy.mean(DataTrain_Scaled, axis=0))
+        #print("Train std (≈1):", numpy.std(DataTrain_Scaled, axis=0))
+        #print("LB scaled:", LB_TIME_scaled)
+        #print("UB scaled:", UB_TIME_scaled)
+        # Boundaries Check
+        #print("Train min:", numpy.min(DataTrain_Scaled, axis=0))
+        #print("Train max:", numpy.max(DataTrain_Scaled, axis=0))
+        #print("LB_TIME_scaled:", LB_TIME_scaled)
+        #print("UB_TIME_scaled:", UB_TIME_scaled)
+        # Visualization Check
+        #for i in range(len(Features)):
+        #    matplotlib.pyplot.figure()
+        #    matplotlib.pyplot.hist(DataTrain_Scaled[:, i], bins=20, alpha=0.5, label="Train")
+        #    matplotlib.pyplot.axvline(LB_TIME_scaled[i], color='r', label='LB_TIME')
+        #    matplotlib.pyplot.axvline(UB_TIME_scaled[i], color='g', label='UB_TIME')
+        #    matplotlib.pyplot.title(f"Feature {Features[i]}")
+        #    matplotlib.pyplot.legend()
+        #    matplotlib.pyplot.show()
+
+        # PSO Fitness Function
+        def PSOFitnessFunc(x):
+            y = DataTrain['RK'].values
+            fitness = numpy.full(x.shape[0], numpy.inf)
+            for i in range(x.shape[0]):
+                fitness[i] = numpy.min(100 * numpy.abs((y - RegModel.predict(x[i, :].reshape(1, -1))) / y))
+            return fitness
+
+        options = {'c1': C1, 'c2': C2, 'w': W_MAX}
+        bounds = (LB_TIME_scaled.values, UB_TIME_scaled.values)
+
+        optimizer = pyswarms.single.GlobalBestPSO(
+            n_particles=SwarmSize,
+            dimensions=len(Features),
+            options=options,
+            bounds=bounds
+        )
+        cost, pos = optimizer.optimize(PSOFitnessFunc, iters=MaxIter,verbose=False)
+        #pos_re = pos * scale_X + mean_X
+        #print(f"pos_re: {pos_re}")
+        
+        DataVir = pandas.DataFrame(columns=DataTrain.columns)
+        VirSamp = pandas.DataFrame(pos.reshape(1, -1), columns=Features)
+        VirSamp[PredPara] = RegModel.predict(pos.reshape(1, -1))
+        #print("====== Virtual Sample ======")
+        #print(VirSamp)
+        DataVir = pandas.concat([DataVir, VirSamp], ignore_index=True)
+        #print("====== DataVir ======")
+        #print(DataVir)
+        DataTrain_PSOVSG = pandas.concat([DataTrain_Scaled_DF_WithRK, DataVir], ignore_index=True)
+        print("====== DataTrain_PSOVSG ======")
+        print(DataTrain_PSOVSG)
+
+        # Model Fitting
+        RegModel.fit(DataTrain_PSOVSG[Features].values, DataTrain_PSOVSG[PredPara].values)
+        # Model Prediction
+        OrigYTrainPred_PSOVSG = RegModel.predict(DataTrain_Scaled_DF[Features].values)
+        OrigYTestPred_PSOVSG = RegModel.predict(DataTest_Scaled_DF[Features].values)
+        # Evaluation
+        OrigTrainRMSE_PSOVSG = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred_PSOVSG))
+        OrigTrainMAPE_PSOVSG = mean_absolute_percentage_error(DataTrain[PredPara].values, OrigYTrainPred_PSOVSG)
+        OrigTestRMSE_PSOVSG = numpy.sqrt(mean_squared_error(DataTest[PredPara].values, OrigYTestPred_PSOVSG))
+        OrigTestMAPE_PSOVSG = mean_absolute_percentage_error(DataTest[PredPara].values, OrigYTestPred_PSOVSG)
+        OrigTrainRMSEs_PSOVSG.append(OrigTrainRMSE_PSOVSG)
+        OrigTrainMAPEs_PSOVSG.append(OrigTrainMAPE_PSOVSG)
+        OrigTestRMSEs_PSOVSG.append(OrigTestRMSE_PSOVSG)
+        OrigTestMAPEs_PSOVSG.append(OrigTestMAPE_PSOVSG)
 
     OrigTrainRMSEs_Mean.append(numpy.mean(OrigTrainRMSEs))
     OrigTrainMAPEs_Mean.append(numpy.mean(OrigTrainMAPEs))
     OrigTestRMSEs_Mean.append(numpy.mean(OrigTestRMSEs))
     OrigTestMAPEs_Mean.append(numpy.mean(OrigTestMAPEs))
 
-for i in range(len(TRAIN_SIZE)):
-        print(f"Train Size:{TRAIN_SIZE[i]}|OrigTrainRMSE:{OrigTrainRMSEs_Mean[i]}|OrigTestRMSE:{OrigTestRMSEs_Mean[i]}|OrigTrainMAPE:  {OrigTrainMAPEs_Mean[i]}|OrigTestMAPE:{OrigTestMAPEs_Mean[i]}")
-
-StatisticResultsOutput = "Results/StatisticResults(ModelTest_ELM).csv"
-with open(StatisticResultsOutput,  mode="w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow([
-        "Training Set Size",
-        "Train RMSE(Mean)",
-        "Test RMSE(Mean)",
-        "Train MAPE(Mean)",
-        "Test MAPE(Mean)"
-    ])
-    for i in range(len(TRAIN_SIZE)):
-        writer.writerow([
-            TRAIN_SIZE[i],
-            OrigTrainRMSEs_Mean[i],
-            OrigTestRMSEs_Mean[i],
-            OrigTrainMAPEs_Mean[i],
-            OrigTestMAPEs_Mean[i]
-        ])
-
-# RMSE Plot
-matplotlib.pyplot.plot(TRAIN_SIZE, OrigTestRMSEs_Mean, label="Test Data")
-matplotlib.pyplot.plot(TRAIN_SIZE, OrigTrainRMSEs_Mean, label="Train Data")
-matplotlib.pyplot.legend(loc=1)
-matplotlib.pyplot.title("MLCC Dataset Fitting: RMSE (ELM)")
-matplotlib.pyplot.xlabel("Size of Training Set")
-matplotlib.pyplot.ylabel("RMSE Value")
-matplotlib.pyplot.savefig("Results/MLCC_ELM_RMSE.png")
-matplotlib.pyplot.show()
-# MAPE Plot
-matplotlib.pyplot.plot(TRAIN_SIZE, OrigTestMAPEs_Mean, label="Test Data")
-matplotlib.pyplot.plot(TRAIN_SIZE, OrigTrainMAPEs_Mean, label="Train Data")
-matplotlib.pyplot.legend(loc=1)
-matplotlib.pyplot.title("MLCC Dataset Fitting: MAPE (ELM)")
-matplotlib.pyplot.xlabel("Size of Training Set")
-matplotlib.pyplot.ylabel("MAPE Value")
-matplotlib.pyplot.savefig("Results/MLCC_ELM_MAPE.png")
-matplotlib.pyplot.show()
-
-# Fitness Function
-# Pre-train Model
-# PSO Domain Calculation
-CL = numpy.mean(DataTrain_Scaled_DF.loc(axis=1)[Features])
-N_L = numpy.count_nonzero(DataTrain_Scaled_DF.loc(axis=1)[Features] < CL, axis=0)
-N_U = numpy.count_nonzero(DataTrain_Scaled_DF.loc(axis=1)[Features] > CL, axis=0)
-s_p = 1
-sk_L = N_L / (N_L + N_U + s_p)
-sk_U = N_U / (N_L + N_U + s_p)
-print(f"sk_L :: {sk_L}")
-LB_TIME = CL - 1/sk_U * (CL - numpy.min(DataTrain_Scaled_DF.loc(axis=1)[Features], axis=0))
-UB_TIME = CL + 1/sk_L * (numpy.max(DataTrain_Scaled_DF.loc(axis=1)[Features], axis=0) - CL)
-print(f"UB_TIME :\n{UB_TIME}")
-print(f"LB_TIME :\n{LB_TIME}")
-
-features_idx = 0
-for FeaturesName in Features:
-    #type(FeaturesName)
-    #print(f'{FeaturesName}')
-    CL = DataTrain_Scaled_DF[FeaturesName].mean()
-    N_L = numpy.count_nonzero(DataTrain_Scaled_DF[FeaturesName] < CL)
-    N_U = numpy.count_nonzero(DataTrain_Scaled_DF[FeaturesName] > CL)
-    sk_L = N_L / (N_L + N_U + 1)
-    sk_U = N_U / (N_L + N_U + 1)
-    LB_MaxMin = DataTrain_Scaled_DF[FeaturesName].min()
-    UB_MaxMin = DataTrain_Scaled_DF[FeaturesName].max()
-    LB_TIME = CL - 1/sk_U  * (CL - DataTrain_Scaled_DF[FeaturesName].min())
-    UB_TIME = CL + 1/sk_L * (DataTrain_Scaled_DF[FeaturesName].max() - CL)
-    seaborn.stripplot(x=DataTrain_Scaled_DF[FeaturesName],color='b', label='Train Data')
-    seaborn.stripplot(x=DataTest_Scaled_DF[FeaturesName],color='g', label='Test Data')
-    matplotlib.pyplot.title(f"Features: {FeaturesName}")
-    matplotlib.pyplot.scatter(CL, 0, marker='o', c='r', label='CL')
-    matplotlib.pyplot.axvline(LB_MaxMin, c='g', label='MaxMin Boundaries')
-    matplotlib.pyplot.axvline(UB_MaxMin, c='g')
-    matplotlib.pyplot.axvline(LB_TIME, c='r', label='TIME Boundaries')
-    matplotlib.pyplot.axvline(UB_TIME, c='r')
-    matplotlib.pyplot.legend(loc=1)
-    matplotlib.pyplot.savefig(f"Results/BaselinePSOVSGDomainDemo{features_idx}.png")
-    matplotlib.pyplot.show()
-    features_idx += 1
-
-# while size(NewSamples) < Nvir:
-    # Global Best (Position=None,Fitness=inf)
-    # Particles Initialization (Position, Velocity)
-    # PSO Argument Settings
-    # PSO Search
-    # New Samples Append
-
-## Regressoion Model
-#RegModel = ELMRegressor(RandomState=RANDSEED)
-#
-## Model Fitting
-#RegModel.fit(XTrain,DataTrain[PredPara].values)
-#
-## Prediction
-#OrigYTrainPred = RegModel.predict(XTrain)
-#OrigYTestPred = RegModel.predict(XTest)
-#
-## Evaluation
-#OrigTrainRMSE = numpy.sqrt(mean_squared_error(DataTrain[PredPara].values, OrigYTrainPred))
-#OrigTrainMAPE = mean_absolute_percentage_error(DataTrain[PredPara].values, OrigYTrainPred)
-#OrigTestRMSE = numpy.sqrt(mean_squared_error(DataTest[PredPara].values, OrigYTestPred))
-#OrigTestMAPE = mean_absolute_percentage_error(DataTest[PredPara].values, OrigYTestPred)
-#
-#print(f"OrigTrainRMSE: {OrigTrainRMSE} | OrigTrainMAPE: {OrigTrainMAPE}")
-#
-## PSO Domain
-#PSOBound_LB = XTrain.min(axis=0)
-#PSOBound_UB = XTrain.max(axis=0)
-##print("====== PSO Boundaries ======")
-##print(f"PSO Bound(LB): {PSOBound_LB}")
-##print(f"PSO Bound(UB): {PSOBound_UB}")
-#
-## Fitness Function
-##def PSOFitnessFunc(x):
+    OrigTrainRMSEs_Mean_PSOVSG.append(numpy.mean(OrigTrainRMSEs_PSOVSG))
+    OrigTrainMAPEs_Mean_PSOVSG.append(numpy.mean(OrigTrainMAPEs_PSOVSG))
+    OrigTestRMSEs_Mean_PSOVSG.append(numpy.mean(OrigTestRMSEs_PSOVSG))
+    OrigTestMAPEs_Mean_PSOVSG.append(numpy.mean(OrigTestMAPEs_PSOVSG))
