@@ -194,7 +194,7 @@ for TrainingSetSize in TRAIN_SIZE:
         #pos_re = pos * scale_X + mean_X
         #print(f"pos_re: {pos_re}")
         
-        DataVir = pandas.DataFrame(columns=DataTrain.columns)
+        DataVir = pandas.DataFrame(columns=list(Features) + list(PredPara), dtype=float)
         VirSamp = pandas.DataFrame(pos.reshape(1, -1), columns=Features)
         VirSamp[PredPara] = RegModel.predict(pos.reshape(1, -1))
         #print("====== Virtual Sample ======")
@@ -203,8 +203,8 @@ for TrainingSetSize in TRAIN_SIZE:
         #print("====== DataVir ======")
         #print(DataVir)
         DataTrain_PSOVSG = pandas.concat([DataTrain_Scaled_DF_WithRK, DataVir], ignore_index=True)
-        print("====== DataTrain_PSOVSG ======")
-        print(DataTrain_PSOVSG)
+        #print("====== DataTrain_PSOVSG ======")
+        #print(DataTrain_PSOVSG)
 
         # Model Fitting
         RegModel.fit(DataTrain_PSOVSG[Features].values, DataTrain_PSOVSG[PredPara].values)
